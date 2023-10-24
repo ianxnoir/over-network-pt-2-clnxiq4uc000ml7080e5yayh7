@@ -9,6 +9,7 @@ import { newUserSchema } from '@/lib/zod';
 import { dropUser, getNumberOfUsers, storeUser } from '@/lib/storage';
 import { createProfile, newPrivateKey } from '@/lib/contract';
 import LoginWindow from './loginWindow';
+import { User } from '@/lib/types';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -55,9 +56,9 @@ export default async function RootLayout({
   */
   const setUpProfile = async (form: FormData) => {
     /*
-      TODO #1: Indicate that this function is a server function by adding 'use server';
-    */
-
+    TODO #1: Indicate that this function is a server function by adding 'use server';
+  */
+    "use server";
     /*
       TODO #2: Create the new User object with a username, name, and privateKey
     
@@ -65,12 +66,19 @@ export default async function RootLayout({
         - 
         - Use the newPrivateKey() function to generate a new private key for the user
     */
-
+    const newUser: User = {
+      username: form.get("username") as string,
+      name: form.get("name") as string,
+      privateKey: newPrivateKey(),
+      followers: 0,
+      following: 0,
+    };
     /* 
       TODO #3: Store the user in the local account cache
 
       HINT: Use the storeUser() function to store the user
     */
+    await storeUser(newUser);
 
     /* 
       TODO #4: Set up a try catch block to create the user's profile and log them in if successful.
@@ -83,6 +91,19 @@ export default async function RootLayout({
           from the local account cache. Then, throw the error to be caught by the catch block in
           the loginWindow.tsx file.
     */
+
+    try {
+
+      await createProfile(newUser);
+
+      await login(newUser);
+
+    } catch (error) {
+
+      await dropUser(newUser);
+
+      throw error;
+    }
   }
 
   if (!me) {
@@ -95,11 +116,11 @@ export default async function RootLayout({
             <div className='w-full max-w-xs space-y-6 rounded-xl border border-neutral-300 bg-neutral-400 px-6 py-4'>
               <p className='text-2xl font-bold'>Log in to Over Network</p>
               {
-                await getNumberOfUsers() >= 2 ? 
-                <p className='text-sm font-medium text-neutral-100'>
-                  You have reached the maximum number of accounts.
-                </p> :
-                <LoginWindow setUpProfile={setUpProfile} /> 
+                await getNumberOfUsers() >= 2 ?
+                  <p className='text-sm font-medium text-neutral-100'>
+                    You have reached the maximum number of accounts.
+                  </p> :
+                  <LoginWindow setUpProfile={setUpProfile} />
               }
               <Accounts />
             </div>
